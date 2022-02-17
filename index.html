@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vampire Survivors Save Editor</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica,
+          Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          color: #c9d1d9;
+          background-color: black;
+        }
+        a {
+          color: #58a6ff;
+        }
+      }
+      h1,
+      h4 {
+        margin: 0;
+      }
+      h2 {
+        margin: 0.5em 0;
+      }
+      ol {
+        margin: 0.5em 0;
+      }
+      main {
+        margin-top: 1em;
+      }
+      textarea {
+        height: calc(100vh - 25rem);
+        color: white;
+        background-color: #240000;
+      }
+      #error {
+        color: red;
+        margin-top: 0.5em;
+        margin-bottom: 0.5em;
+      }
+      code {
+        background: #222;
+        padding: 2px 5px;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Vampire Survivors Save Editor</h1>
+    <small>
+      Last updated: February 16th, 2022 for game version 0.2.12 &mdash;
+      <a href="https://github.com/benediktwerner/vampire-survivors-save-editor">
+        Source
+      </a>
+    </small>
+
+    <main>
+      <h4>Backup save location:</h4>
+      <ol>
+        <li>
+          Go to the game's installation directory (e.g. by right-clicking on it
+          in Steam and selecting "Browse local files")
+        </li>
+        <li>
+          From there, the backup save is at
+          <code>resources\app\.webpack\renderer\SaveDataBackup.sav</code>
+        </li>
+      </ol>
+      <p>
+        To load the backup save after editing it, open the game, go to the
+        options menu, and click the "Restore backup" button twice.
+      </p>
+      <b>
+        <u>
+          NOTE: You need to press "Update checksum" after editing! Otherwise,
+          the game will think the save is corrupted.
+        </u>
+      </b>
+      <p>Paste or upload save file: <input type="file" /></p>
+      <!-- <input
+        id="radio-editor-text"
+        type="radio"
+        name="editor"
+        value="text"
+        checked
+      />
+      <label for="radio-editor-text">Text Editor</label>
+      <input
+        id="radio-editor-visual"
+        type="radio"
+        name="editor"
+        value="visual"
+      />
+      <label for="radio-editor-visual">Visual Editor</label>
+      <br />
+      <br /> -->
+      <div id="editor-text">
+        <textarea cols="100"></textarea>
+        <div id="error"></div>
+        <button id="btn-format" type="button">Format</button>
+        <button id="btn-update-checksum" type="button">Update checksum</button>
+        <button id="btn-download" type="button">Download</button>
+      </div>
+      <!-- <div id="editor-visual">
+        <button id="btn-download-visual" type="button">Download</button>
+      </div> -->
+    </main>
+
+    <script>
+      const visualEditorModel = {
+        SelectedCharacter: 'char',
+        SelectedStage: 'map',
+        SelectedHyper: 'bool',
+        Coins: 'int',
+        RunCoins: 'int',
+        RunEnemies: 'int',
+        RunPickups: { type: 'list' },
+        LifetimeCoins: 'int',
+        BeginnersLuck: { type: 'int', min: 0, max: 6 },
+        LifetimeSurvived: 'int',
+        LifetimeHeal: 'int',
+        SoundsEnabled: 'bool',
+        MusicEnabled: 'bool',
+        SoundsVolume: 'float',
+        MusicVolume: 'float',
+        FlashingVFXEnabled: 'bool',
+        JoystickVisible: 'bool',
+        DamageNumbersEnabled: 'bool',
+        StreamSafeEnabled: 'bool',
+        CheatCodeUsed: 'bool',
+        Language: 'string',
+        BoughtCharacters: { type: 'list', values: 'chars' },
+        BoughtPowerups: {
+          type: 'list',
+          values: [
+            'REROLL',
+            'REVIVAL',
+            'AMOUNT',
+            'GROWTH',
+            'GREED',
+            'SKIP',
+            'MOVESPEED',
+            'MAGNET',
+            'LUCK',
+            'REGEN',
+            'DURATION',
+            'SPEED',
+            'AREA',
+            'ARMOR',
+            'POWER',
+            'COOLDOWN',
+            'MAXHEALTH',
+          ],
+        },
+        CollectedWeapons: {
+          type: 'list',
+          values: 'weapon',
+        },
+        UnlockedWeapons: {
+          type: 'list',
+          values: 'weapon',
+        },
+        UnlockedCharacters: {
+          type: 'list',
+          values: 'char',
+        },
+        CollectedItems: {
+          type: 'list',
+          values: [
+            'ROAST',
+            'OROLOGION',
+            'CLOVER',
+            'TREASURE',
+            'COINBAG1',
+            'COINBAG2',
+            'COINBAGMAX',
+            'ROSARY',
+            'NFT',
+            'VACUUM',
+            'LITTLEHEART',
+          ],
+        },
+        Achievements: {
+          type: 'list',
+          values: [
+            'Defeat100KEnemies',
+            'Defeat3000Skeletons',
+            'Defeat5000Enemies',
+            'DefeatBossLibrary',
+            'DefeatBossMadForest',
+            'Destroy20Candles',
+            'Earn5000CoinsInASingleRun',
+            'Eat5PotRoast',
+            'EvolveAxe',
+            'EvolveCross',
+            'EvolveFireWand',
+            'EvolveGarlic',
+            'EvolveKingBible',
+            'EvolveKnife',
+            'EvolveLightning',
+            'EvolveMagicWand',
+            'EvolveSantaWater',
+            'EvolveWhip',
+            'FindAClover',
+            'FindAnOrologion',
+            'FindARosary',
+            'FindAStoneMask',
+            'FindAVacuum',
+            'GetFireWandToLevel4',
+            'GetGarlicToLevel7',
+            'GetHolyBookToLevel4',
+            'GetHolyWaterToLevel4',
+            'GetLightningRingToLevel4',
+            'GetMagicMissileToLevel7',
+            'GetPeachoneToLevel7',
+            'GetRunetracerToLevel7',
+            'Have6DifferentWeapons',
+            'ReachLV10',
+            'ReachLV100WithMortaccio',
+            'ReachLV20InMadForest',
+            'ReachLV5',
+            'Recover1000HP',
+            'Survive10Minutes',
+            'Survive1Minute',
+            'Survive20Minutes',
+            'Survive20MinutesWithCross',
+            'Survive30MinutesInGreenAcres',
+            'Survive5MinutesWithDiamond',
+            'Survive5MinutesWithKnife',
+            'UniteBirds',
+            'Unlock2Hypers',
+          ],
+        },
+        UnlockedStages: {
+          type: 'list',
+          values: 'map',
+        },
+        UnlockedHypers: {
+          type: 'list',
+          values: 'map',
+        },
+        UnlockedPowerUpRanks: ['REROLL', 'SKIP'],
+        KillCount: {
+          type: 'object',
+          keys: [
+            'BAT1',
+            'BAT2',
+            'BAT3',
+            'BAT4',
+            'BAT5',
+            'BATSWARM',
+            'ZOMBIE',
+            'SKELETON',
+            'WEREWOLF',
+            'GHOST',
+            'GHOSTSWARM',
+            'FLOWER',
+            'MUDMAN1',
+            'MUDMAN2',
+            'ARMOR',
+            'JELLYFISH',
+            'BOSS_WEREWOLF',
+            'MUD',
+            'BUER',
+            'MUMMY',
+            'ECTO1',
+            'ECTO2',
+            'WITCH1',
+            'WITCH2',
+            'MEDUSA1',
+            'MEDUSA2',
+            'MEDUSA2_AGGRO',
+            'DULL1',
+            'DULL2',
+            'SKULL2',
+            'SKULL2_SWARM',
+            'SHADEBLUE',
+            'SHADERED',
+            'XLBAT',
+            'XLMUMMY',
+            'XLMANTIS',
+            'XLFLOWER',
+            'XLMEDUSA',
+            'BOSS_XLMUMMY',
+            'BOSS_XLBAT',
+            'BOSS_XLMANTIS',
+            'BOSS_XLFLOWER',
+            'BOSS_XLDEATH',
+            'BOSS_ECTO',
+            'BOSS_MUD',
+            'BOSS_BUER',
+            'BOSS_XLMEDUSA',
+            'BOSS_COUNT1',
+            'BOSS_COUNT2',
+            'BOSS_MEDUSA1',
+            'BOSS_WITCH2',
+            'undefined',
+            'test',
+          ],
+          values: 'int',
+        },
+        PickupCount: {
+          type: 'object',
+          keys: [
+            'VOID',
+            'WHIP',
+            'COIN',
+            'COINBAG1',
+            'COINBAG2',
+            'COINBAGMAX',
+            'GEM',
+            'CLOVER',
+            'TREASURE',
+            'ROSARY',
+            'VACUUM',
+            'OROLOGION',
+            'ROAST',
+            'WEAPON',
+            'STATS_TREASURE_1',
+            'STATS_TREASURE_2',
+            'STATS_TREASURE_3',
+            'NFT',
+            'LITTLEHEART',
+          ],
+          values: 'int',
+        },
+        DestroyedCount: {
+          type: 'object',
+          keys: ['CANDLE', 'CANDELABRA', 'BRAZIER', 'BRAZIER2'],
+          values: 'int',
+        },
+      };
+      const maps = [
+        ['FOREST', 'Mad Forest'],
+        ['SINKING', 'Old Sanctuary'],
+        ['LIBRARY', 'Inlaid Library'],
+        ['GREENACRES', 'Green Acres'],
+      ];
+      const chars = [
+        'ANTONIO',
+        'IMELDA',
+        'PASQUALINA',
+        'GENNARO',
+        'CIRO',
+        'CAMILLO',
+        'GERMANA',
+        'DOMMARIO',
+        'CROCI',
+        'EXDASH',
+        'NOSTRO',
+      ];
+      const weapons = [
+        'WHIP',
+        ['VAMPIRICA', 'Evolved Whip'],
+        ['MAGIC_MISSILE', 'Magic Wand'],
+        ['HOLY_MISSILE', 'Evolved Wand'],
+        'KNIFE',
+        ['THOUSAND', 'Evolved Knfie'],
+        'AXE',
+        ['SCYTHE', 'Evolved Axe'],
+        'CROSS',
+        ['HEAVENSWORD', 'Evolved Cross'],
+        ['HOLYBOOK', 'King Bible'],
+        ['VESPERS', 'Evolved Bible'],
+        'FIREBALL',
+        ['HELLFIRE', 'Evolved Fireball'],
+        'GARLIC',
+        ['VORTEX', 'Evolved Garlic'],
+        ['HOLYWATER', 'Santa Water'],
+        ['BORA', 'Evolved Santa Water'],
+        'LIGHTNING',
+        ['LOOP', 'Evolved Lightning'],
+        ['SILF', 'Peachone'],
+        ['SILF2', 'Evbony Wings'],
+        ['DIAMOND', 'Runetracer'],
+        'PENTAGRAM',
+        ['LANCET', 'Clock Lancet'],
+        'LAUREL',
+        'BONE',
+        'NDUJA',
+        'POWER',
+        'ARMOR',
+        'MAXHEALTH',
+        'REGEN',
+        'COOLDOWN',
+        'AREA',
+        'SPEED',
+        'DURATION',
+        'MOVESPEED',
+        'MAGNET',
+        'LUCK',
+        'GROWTH',
+        'GREED',
+        'REVIVAL',
+      ];
+
+      const $ = (e) => document.querySelector(e);
+      const $$ = (e) => document.querySelectorAll(e);
+      const tryParseJson = (t) => {
+        try {
+          return JSON.parse(t);
+        } catch {
+          return undefined;
+        }
+      };
+      const sha256 = (text) =>
+        crypto.subtle
+          .digest('SHA-256', new TextEncoder().encode(text))
+          .then(buf2hex);
+      const buf2hex = (buffer) =>
+        [...new Uint8Array(buffer)]
+          .map((x) => x.toString(16).padStart(2, '0'))
+          .join('');
+
+      const format = () => {
+        error.innerText = '';
+        const json = tryParseJson(textarea.value);
+        if (!json) {
+          error.innerText = 'Error: Invalid JSON';
+          return;
+        }
+        textarea.value = JSON.stringify(json, null, 2);
+      };
+
+      const updateChecksum = async () => {
+        error.innerText = '';
+        const json = tryParseJson(textarea.value);
+        if (!json) {
+          error.innerText = 'Error: Invalid JSON';
+          return;
+        }
+        try {
+          json.checksum = '';
+          json.checksum = await sha256(JSON.stringify(json));
+        } catch (e) {
+          error.innerText = `Error: ${e}`;
+          return;
+        }
+        textarea.value = JSON.stringify(json, null, 2);
+      };
+
+      const textarea = $('textarea');
+      const error = $('#error');
+      const fileInput = $('input[type=file]');
+      const visualEditor = $('#editor-visual');
+
+      let visualEditorData = {};
+
+      const getDefaultVal = (model) => {
+        if (model === "int" || model === "float") return 0;
+        if (model === "bool") return false;
+        if (model === "string") return "";
+        if (model === "char") return chars[0];
+        if (model === "weapon") {
+          const wpn = weapons[0];
+          if (Array.isArray(wpn)) return wpn[0];
+          return wpn;
+        }
+        if (model === "map") return maps[0];
+        if (model.type === "list") return [];
+        if (model.type === "object") {
+          const obj = {};
+          const def = getDefaultVal(model.values);
+          for (const key in object.keys) obj[key] = def;
+        }
+        if (Array.isArray(model)) return model[0];
+        throw Exception(`Unknown model: ${JSON.stringify(model)}`)
+      }
+
+      // const renderVisualEditor = () => {
+      //   visualEditor.innerHTML = '';
+      //   for (const [key, model] in Object.entries(visualEditorModel)) {
+      //     if (key in visualEditorData) continue;
+      //     visualEditorData[key] = getDefaultVal(model);
+      //   }
+      //   for (const [key, val] in Object.entries(visualEditorData)) {
+      //     const model = visualEditorModel[key];
+      //     if (model) {
+      //       if (model === "int")
+      //     }
+      //   }
+      // };
+
+      fileInput.addEventListener('change', () => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          textarea.value = reader.result;
+          format();
+        };
+        reader.readAsText(fileInput.files[0]);
+      });
+
+      $('#btn-update-checksum').addEventListener('click', updateChecksum);
+      $('#btn-format').addEventListener('click', format);
+      $('#btn-download').addEventListener('click', async () => {
+        await updateChecksum();
+        const url = window.URL.createObjectURL(new Blob([textarea.value]));
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'SaveDataBackup.sav';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+      });
+    </script>
+  </body>
+</html>
