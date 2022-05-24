@@ -19,23 +19,27 @@
           color: #58a6ff;
         }
       }
-      h1,
-      h4 {
+      h1 {
         margin: 0;
       }
-      h2 {
-        margin: 0.5em 0;
+      h4 {
+        margin-top: 1em;
       }
       ol {
         margin: 0.5em 0;
       }
       main {
         margin-top: 1em;
+        display: flex;
       }
       textarea {
-        height: calc(100vh - 25rem);
+        height: calc(100vh - 15rem);
         color: white;
         background-color: #240000;
+      }
+      .explanation {
+        margin-left: 2em;
+        max-width: 900px;
       }
       #error {
         color: red;
@@ -47,68 +51,107 @@
         padding: 2px 5px;
         border-radius: 5px;
       }
+      .list-collapse:not(.open) {
+        display: none;
+      }
+      #editor-text,
+      #editor-visual {
+        margin-top: 0.5em;
+      }
     </style>
   </head>
   <body>
     <h1>Vampire Survivors Save Editor</h1>
     <small>
-      Last updated: February 16th, 2022 for game version 0.2.12 &mdash;
+      Last updated: May 24th, 2022 &mdash;
       <a href="https://github.com/benediktwerner/vampire-survivors-save-editor">
         Source
       </a>
     </small>
 
     <main>
-      <h4>Backup save location:</h4>
-      <ol>
-        <li>
-          Go to the game's installation directory (e.g. by right-clicking on it
-          in Steam and selecting "Browse local files")
-        </li>
-        <li>
-          From there, the backup save is at
-          <code>resources\app\.webpack\renderer\SaveDataBackup.sav</code>
-        </li>
-      </ol>
-      <p>
-        To load the backup save after editing it, open the game, go to the
-        options menu, and click the "Restore backup" button twice.
-      </p>
-      <b>
-        <u>
-          NOTE: You need to press "Update checksum" after editing! Otherwise,
-          the game will think the save is corrupted.
-        </u>
-      </b>
-      <p>Paste or upload save file: <input type="file" /></p>
-      <!-- <input
-        id="radio-editor-text"
-        type="radio"
-        name="editor"
-        value="text"
-        checked
-      />
-      <label for="radio-editor-text">Text Editor</label>
-      <input
-        id="radio-editor-visual"
-        type="radio"
-        name="editor"
-        value="visual"
-      />
-      <label for="radio-editor-visual">Visual Editor</label>
-      <br />
-      <br /> -->
-      <div id="editor-text">
-        <textarea cols="100"></textarea>
-        <div id="error"></div>
-        <button id="btn-format" type="button">Format</button>
-        <button id="btn-update-checksum" type="button">Update checksum</button>
-        <button id="btn-download" type="button">Download</button>
+      <div>
+        <p>
+          Upload save file: <input type="file" /> or paste its content below:
+        </p>
+        <!-- <input
+          id="radio-editor-text"
+          type="radio"
+          name="editor"
+          value="text"
+          checked
+        />
+        <label for="radio-editor-text">Text Editor</label>
+        <input
+          id="radio-editor-visual"
+          type="radio"
+          name="editor"
+          value="visual"
+        />
+        <label for="radio-editor-visual">Visual Editor</label>
+        <br /> -->
+        <div id="editor-text">
+          <textarea cols="100"></textarea>
+          <div id="error"></div>
+          <button id="btn-format" type="button">Format</button>
+          <button id="btn-update-checksum" type="button">
+            Update checksum
+          </button>
+          <button id="btn-download" type="button">Download</button>
+        </div>
+        <!-- <div id="editor-visual">
+          <div id="editor-visual-content"></div>
+          <button id="btn-download-visual" type="button">Download</button>
+        </div> -->
       </div>
-      <!-- <div id="editor-visual">
-        <button id="btn-download-visual" type="button">Download</button>
-      </div> -->
+
+      <div class="explanation">
+        <h4>Save file location:</h4>
+        <ul>
+          <li>
+            <b>Windows:</b>
+            <code>%appdata%\Vampire_Survivors\saves\SaveData.sav</code><br />
+            <span style="margin-left: 2em">
+              (which translates to something like
+              <code>
+                C:\Users\&lt;your
+                username&gt;\AppData\Roaming\Vampire_Survivors\saves\SaveData.sav</code
+              >)
+            </span>
+          </li>
+          <li>
+            <b>MacOS:</b>
+            <code>
+              $HOME/Library/Application
+              Support/Vampire_Survivors/saves/SaveData.sav
+            </code>
+          </li>
+          <li>
+            <b>Linux:</b>
+            <code>$HOME/.config/Vampire_Survivors/saves/SaveData.sav</code>
+          </li>
+        </ul>
+        <p>
+          Make sure you make a copy of your save file before editing it in case
+          something goes wrong!
+        </p>
+        <b>
+          <u>
+            NOTE: You need to press "Update checksum" after editing! Otherwise,
+            the game will think the save is corrupted.
+          </u>
+        </b>
+        <p>
+          You can ignore any advice you may have read elsewhere about making
+          sure the formatting doesn't change or keeping it all on one line. This
+          editor will automatically make sure the checksum is always calculated
+          correctly.
+        </p>
+      </div>
     </main>
+
+    <datalist id="datalist-char"></datalist>
+    <datalist id="datalist-map"></datalist>
 
     <script>
       const visualEditorModel = {
@@ -118,7 +161,7 @@
         Coins: 'int',
         RunCoins: 'int',
         RunEnemies: 'int',
-        RunPickups: { type: 'list' },
+        RunPickups: { type: 'list', values: [] },
         LifetimeCoins: 'int',
         BeginnersLuck: { type: 'int', min: 0, max: 6 },
         LifetimeSurvived: 'int',
@@ -133,7 +176,7 @@
         StreamSafeEnabled: 'bool',
         CheatCodeUsed: 'bool',
         Language: 'string',
-        BoughtCharacters: { type: 'list', values: 'chars' },
+        BoughtCharacters: { type: 'list', values: 'char' },
         BoughtPowerups: {
           type: 'list',
           values: [
@@ -298,8 +341,6 @@
             'BOSS_COUNT2',
             'BOSS_MEDUSA1',
             'BOSS_WITCH2',
-            'undefined',
-            'test',
           ],
           values: 'int',
         },
@@ -352,6 +393,7 @@
         'CROCI',
         'EXDASH',
         'NOSTRO',
+        'FINO',
       ];
       const weapons = [
         'WHIP',
@@ -400,6 +442,15 @@
 
       const $ = (e) => document.querySelector(e);
       const $$ = (e) => document.querySelectorAll(e);
+
+      const textarea = $('textarea');
+      const error = $('#error');
+      const fileInput = $('input[type=file]');
+      const visualEditor = $('#editor-visual');
+      const visualEditorContent = $('#editor-visual-content');
+
+      let visualEditorData = {};
+
       const tryParseJson = (t) => {
         try {
           return JSON.parse(t);
@@ -443,47 +494,128 @@
         textarea.value = JSON.stringify(json, null, 2);
       };
 
-      const textarea = $('textarea');
-      const error = $('#error');
-      const fileInput = $('input[type=file]');
-      const visualEditor = $('#editor-visual');
-
-      let visualEditorData = {};
+      const unwrapArray = (a) => (Array.isArray(a) ? a[0] : a);
 
       const getDefaultVal = (model) => {
-        if (model === "int" || model === "float") return 0;
-        if (model === "bool") return false;
-        if (model === "string") return "";
-        if (model === "char") return chars[0];
-        if (model === "weapon") {
-          const wpn = weapons[0];
-          if (Array.isArray(wpn)) return wpn[0];
-          return wpn;
-        }
-        if (model === "map") return maps[0];
-        if (model.type === "list") return [];
-        if (model.type === "object") {
+        if (model === 'int' || model === 'float' || model.type === 'int')
+          return 0;
+        if (model === 'bool') return false;
+        if (model === 'string') return '';
+        if (model === 'char') return chars[0];
+        if (model === 'weapon') return unwrapArray(weapons[0]);
+        if (model === 'map') return unwrapArray(maps[0]);
+        if (model.type === 'list') return [];
+        if (model.type === 'object') {
           const obj = {};
           const def = getDefaultVal(model.values);
-          for (const key in object.keys) obj[key] = def;
+          for (const key of model.keys) obj[key] = def;
+          return obj;
         }
         if (Array.isArray(model)) return model[0];
-        throw Exception(`Unknown model: ${JSON.stringify(model)}`)
-      }
+        throw new Error(`Unknown model: ${JSON.stringify(model)}`);
+      };
 
-      // const renderVisualEditor = () => {
-      //   visualEditor.innerHTML = '';
-      //   for (const [key, model] in Object.entries(visualEditorModel)) {
-      //     if (key in visualEditorData) continue;
-      //     visualEditorData[key] = getDefaultVal(model);
-      //   }
-      //   for (const [key, val] in Object.entries(visualEditorData)) {
-      //     const model = visualEditorModel[key];
-      //     if (model) {
-      //       if (model === "int")
-      //     }
-      //   }
-      // };
+      const toggleListCollapse = (event) => {
+        const target = event.target;
+        const list = target.parentElement.querySelector('.list-collapse');
+        if (list.classList.toggle('open')) target.innerText = 'Collapse';
+        else target.innerText = 'Expand';
+      };
+
+      const renderRow = (key, model, val) => {
+        if (model) {
+          if (model === 'int')
+            return `<td>${key}:</td><td><input type="number" min="0" value="${val}"></td>`;
+          else if (model === 'float')
+            return `<td>${key}:</td><td><input type="number" value="${val}"></td>`;
+          else if (model === 'string')
+            return `<td>${key}:</td><td><input type="text" value="${val}"></td>`;
+          else if (model === 'bool')
+            return `<td>${key}:</td><td><input type="checkbox" ${
+              val ? 'checked' : ''
+            }"></td>`;
+          else if (model.type === 'int')
+            return `<td>${key}:</td><td><input type="range" value="${val}" min="${model.min}" max="${model.max}"></td>`;
+          else if (model === 'char' || model === 'map') {
+            return `<td>${key}:</td><td><input type="text" list="datalist-${model}" value="${val}"></td>`;
+          } else if (model.type === 'list') {
+            const rows = [];
+            const selected = new Set(val);
+            const values =
+              model.values === 'char'
+                ? chars
+                : model.values === 'map'
+                ? maps
+                : model.values === 'weapon'
+                ? weapons
+                : Array.isArray(model.values)
+                ? model.values
+                : (console.error(
+                    `Unknown list model values: ${model.values} for ${key}`
+                  ),
+                  []);
+            for (let option of values) {
+              let name = option;
+              if (Array.isArray(option)) {
+                [option, name] = option;
+                name = `${option} (${name})`;
+              }
+              const id = `${key}-${option}`;
+              rows.push(
+                `<input id="${id}" type="checkbox" ${
+                  selected.has(option) ? 'checked' : ''
+                }><label for="${id}">${name}</label>`
+              );
+            }
+            return `<td>${key}:</td><td>
+                      <button type="button" onclick="toggleListCollapse(event)">Expand</button>
+                      <div class="list-collapse">
+                        ${rows.join('<br>')}
+                      </div>
+                    </td>`;
+          } else if (model.type === 'object' && model.values === 'int') {
+            const rows = [];
+            for (const k of model.keys) {
+              rows.push(
+                `<tr><td>${k}:</td><td><input type="number" min="0" value="${val[k]}"></td></tr>`
+              );
+            }
+            return `<td>${key}:</td><td>
+                      <button type="button" onclick="toggleListCollapse(event)">Expand</button>
+                      <table class="list-collapse">
+                        ${rows.join('')}
+                      </table>
+                    </td>`;
+          } else console.error(`Unknown model for ${key}:`, model);
+        }
+      };
+
+      const renderVisualEditor = () => {
+        for (const [key, model] of Object.entries(visualEditorModel)) {
+          if (key in visualEditorData) continue;
+          visualEditorData[key] = getDefaultVal(model);
+        }
+        let html = [];
+        for (const [key, val] of Object.entries(visualEditorData)) {
+          const model = visualEditorModel[key];
+          const row = renderRow(key, model, val);
+          if (row) html.push(`<tr>${row}</tr>`);
+        }
+        visualEditorContent.innerHTML = `<table>${html.join('')}</table>`;
+      };
+
+      const populateDatalist = (id, values) => {
+        for (const val of values) {
+          const e = document.createElement('option');
+          e.value = unwrapArray(val);
+          document.getElementById(id).appendChild(e);
+        }
+      };
+
+      // populateDatalist('datalist-char', chars);
+      // populateDatalist('datalist-map', maps);
+
+      // renderVisualEditor();
 
       fileInput.addEventListener('change', () => {
         const reader = new FileReader();
@@ -502,7 +634,7 @@
         const a = document.createElement('a');
         a.style.display = 'none';
         a.href = url;
-        a.download = 'SaveDataBackup.sav';
+        a.download = 'SaveData.sav';
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
