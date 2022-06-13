@@ -63,7 +63,7 @@
   <body>
     <h1>Vampire Survivors Save Editor</h1>
     <small>
-      Last updated: May 24th, 2022 &mdash;
+      Last updated: June 13th, 2022 &mdash;
       <a href="https://github.com/benediktwerner/vampire-survivors-save-editor">
         Source
       </a>
@@ -482,16 +482,17 @@
         const json = tryParseJson(textarea.value);
         if (!json) {
           error.innerText = 'Error: Invalid JSON';
-          return;
+          return false;
         }
         try {
           json.checksum = '';
           json.checksum = await sha256(JSON.stringify(json));
         } catch (e) {
           error.innerText = `Error: ${e}`;
-          return;
+          return false;
         }
         textarea.value = JSON.stringify(json, null, 2);
+        return true;
       };
 
       const unwrapArray = (a) => (Array.isArray(a) ? a[0] : a);
@@ -629,7 +630,8 @@
       $('#btn-update-checksum').addEventListener('click', updateChecksum);
       $('#btn-format').addEventListener('click', format);
       $('#btn-download').addEventListener('click', async () => {
-        await updateChecksum();
+        const ok = await updateChecksum();
+        if (!ok) return;
         const url = window.URL.createObjectURL(new Blob([textarea.value]));
         const a = document.createElement('a');
         a.style.display = 'none';
