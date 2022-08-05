@@ -63,7 +63,7 @@
   <body>
     <h1>Vampire Survivors Save Editor</h1>
     <small>
-      Last updated: June 21st, 2022 &mdash;
+      Last updated: August 5th, 2022 &mdash;
       <a href="https://github.com/benediktwerner/vampire-survivors-save-editor">
         Source
       </a>
@@ -110,30 +110,32 @@
         <ul>
           <li>
             <b>Windows:</b>
-            <code>%appdata%\Vampire_Survivors\saves\SaveData.sav</code><br />
+            <code>%appdata%\Vampire_Survivors_Data\SaveData.sav</code><br />
             <div style="margin-left: 2em">
               (which translates to something like
               <code>
                 C:\Users\&lt;your
-                username&gt;\AppData\Roaming\Vampire_Survivors\saves\SaveData.sav</code
+                username&gt;\AppData\Roaming\Vampire_Survivors_Data\SaveData.sav</code
               >)
               <br />
               or see
               <a href="https://www.youtube.com/watch?v=J-fRhYbWyPk">
-                this video
-              </a>
+                this video</a
+              >
+              (though the exact path has slightly changed since the video was
+              made)
             </div>
           </li>
           <li>
             <b>MacOS:</b>
             <code>
               $HOME/Library/Application
-              Support/Vampire_Survivors/saves/SaveData.sav
+              Support/Vampire_Survivors_Data/SaveData.sav
             </code>
           </li>
           <li>
             <b>Linux:</b>
-            <code>$HOME/.config/Vampire_Survivors/saves/SaveData.sav</code>
+            <code>$HOME/.config/Vampire_Survivors_Data/SaveData.sav</code>
           </li>
         </ul>
         <p>
@@ -479,8 +481,11 @@
           error.innerText = 'Error: Invalid JSON';
           return;
         }
-        textarea.value = JSON.stringify(json, null, 2);
+        textarea.value = formatJson(json);
       };
+
+      const formatJson = (json) =>
+        JSON.stringify(json, null, 2).replace('"checksum": "', '"checksum":"');
 
       const updateChecksum = async () => {
         error.innerText = '';
@@ -491,12 +496,12 @@
         }
         try {
           json.checksum = '';
-          json.checksum = await sha256(JSON.stringify(json));
+          json.checksum = await sha256(formatJson(json));
         } catch (e) {
           error.innerText = `Error: ${e}`;
           return false;
         }
-        textarea.value = JSON.stringify(json, null, 2);
+        textarea.value = formatJson(json);
         return true;
       };
 
